@@ -2,7 +2,7 @@
   "name": "Palorni Nexus",
   "short_name": "Nexus",
   "description": "P2P Communication Platform inspired by Discord, Fortnite, and Windows 11.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0B0C10",
   "theme_color": "#8B5CF6",
@@ -10,21 +10,10 @@
   "categories": ["utilities", "communications", "social"],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/favicon.png",
-      "sizes": "64x64",
-      "type": "image/png"
     }
   ]
 }

@@ -1,11 +1,9 @@
 const CACHE_NAME = 'palorni-nexus-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/src/main.tsx',
-  '/src/index.css',
-  '/src/App.tsx'
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {
