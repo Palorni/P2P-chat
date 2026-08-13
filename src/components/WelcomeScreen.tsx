@@ -92,6 +92,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <p className="text-sm font-semibold text-purple-300/80 tracking-widest mt-1 uppercase">
             Connect. Share. Directly.
           </p>
+          <div className="mt-3 px-3 py-1 bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-purple-500/20 border border-emerald-400/40 rounded-full text-xs font-semibold text-emerald-300 flex items-center gap-1.5 shadow-md">
+            <span>🌐 100% Web & Mobile — Sem Instalações Necessárias</span>
+          </div>
         </div>
 
         {/* Action Form Step */}

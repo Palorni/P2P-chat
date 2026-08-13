@@ -187,7 +187,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* User Footer Profile & Quick Media Mute Buttons */}
         <div className="p-3 bg-[#12131C]/90 border-t border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-md">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-md transition-all ${
+                currentUser.isSpeaking
+                  ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#12131C] shadow-[0_0_15px_rgba(16,185,129,0.8)] scale-105'
+                  : 'bg-gradient-to-tr from-purple-500 to-pink-500'
+              }`}
+            >
               {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="truncate">
@@ -197,7 +203,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span title="HOST" className="text-[10px]">👑</span>
                 )}
               </div>
-              <div className="text-[10px] text-emerald-400 font-mono">Online</div>
+              {currentUser.isSpeaking ? (
+                <div className="text-[10px] text-emerald-400 font-bold font-mono animate-pulse flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Falando...
+                </div>
+              ) : (
+                <div className="text-[10px] text-emerald-400 font-mono">Online</div>
+              )}
             </div>
           </div>
 

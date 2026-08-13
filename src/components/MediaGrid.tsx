@@ -106,9 +106,9 @@ const UserCard: React.FC<UserCardProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full min-h-[160px] bg-[#12131C]/90 backdrop-blur-xl border rounded-2xl overflow-hidden transition-all duration-300 shadow-lg flex flex-col justify-between ${
+      className={`relative w-full h-full min-h-[160px] bg-[#12131C]/90 backdrop-blur-xl border rounded-2xl overflow-hidden transition-all duration-200 shadow-lg flex flex-col justify-between ${
         user.isSpeaking
-          ? 'border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] ring-2 ring-emerald-400/50'
+          ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-[1.01]'
           : 'border-white/10 hover:border-purple-500/40'
       }`}
     >
@@ -120,11 +120,11 @@ const UserCard: React.FC<UserCardProps> = ({
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#181A28] to-[#0D0E15]">
           <div
-            className={`relative rounded-full flex items-center justify-center font-bold text-white shadow-xl transition-transform ${
+            className={`relative rounded-full flex items-center justify-center font-bold text-white shadow-xl transition-all duration-200 ${
               compact ? 'w-12 h-12 text-base' : 'w-20 h-20 text-2xl'
             } ${
               user.isSpeaking
-                ? 'bg-gradient-to-tr from-emerald-500 to-cyan-400 ring-4 ring-emerald-400/40 animate-pulse'
+                ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#0D0E15] shadow-[0_0_25px_rgba(16,185,129,0.8)] scale-105'
                 : 'bg-gradient-to-tr from-purple-600 via-pink-500 to-cyan-400'
             }`}
           >
@@ -166,9 +166,16 @@ const UserCard: React.FC<UserCardProps> = ({
           {user.name} {isLocal && '(Você)'}
         </span>
         {user.isSpeaking && (
-          <span className="text-[10px] font-bold text-emerald-400 font-mono flex items-center gap-1 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Falando
-          </span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 shadow-sm">
+            <div className="flex items-end gap-[2px] h-3">
+              <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-1" />
+              <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-2" />
+              <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-3" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-300 font-mono uppercase tracking-wider">
+              Falando
+            </span>
+          </div>
         )}
       </div>
     </div>

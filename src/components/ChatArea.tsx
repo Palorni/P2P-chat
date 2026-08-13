@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Smile, Paperclip, FileText, Download, CheckCircle2, AlertCircle, X, Mic } from 'lucide-react';
+import { Send, Smile, Paperclip, FileText, Download, CheckCircle2, AlertCircle, X, Image as ImageIcon, Film, Music, Maximize2 } from 'lucide-react';
 import { ChatMessage, TransferFile } from '../types';
 
 interface ChatAreaProps {
@@ -21,6 +21,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +54,99 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     setInputText((prev) => prev + emoji);
   };
 
+  // Helper to extract image URLs from text
+  const extractImageUrl = (text: string): string | null => {
+    const urlRegex = /(https?:\/\/[^\s]+(?:\.(?:png|jpg|jpeg|gif|webp|svg)|data:image\/[a-zA-Z]+;base64,[^\s]+))/i;
+    const match = text.match(urlRegex);
+    return match ? match[0] : null;
+  };
+
+  // Helper to render media attachment inside a message
+  const renderMessageMedia = (msg: ChatMessage) => {
+    const imageUrlInText = extractImageUrl(msg.text);
+
+    if (msg.file) {
+      const { file } = msg;
+      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name);
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mkv|mov)$/i.test(file.name);
+      const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/i.test(file.name);
+
+      if (file.url) {
+        if (isImage) {
+          return (
+            <div className="mt-2 relative group max-w-sm rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
+              <img
+                src={file.url}
+                alt={file.name}
+                onClick={() => setPreviewImageUrl(file.url!)}
+                className="w-full max-h-80 object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                <span className="px-2.5 py-1 bg-black/70 rounded-lg text-white text-xs font-semibold flex items-center gap-1">
+                  <Maximize2 className="w-3.5 h-3.5" /> Ver Imagem
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        if (isVideo) {
+          return (
+            <div className="mt-2 max-w-md rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-black">
+              <video src={file.url} controls className="w-full max-h-80 object-contain" />
+            </div>
+          );
+        }
+
+        if (isAudio) {
+          return (
+            <div className="mt-2 max-w-sm p-3 bg-white/5 border border-white/10 rounded-2xl">
+              <audio src={file.url} controls className="w-full h-10" />
+              <span className="text-[10px] text-gray-400 font-mono mt-1 block">{file.name}</span>
+            </div>
+          );
+        }
+
+        return (
+          <div className="mt-2 p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between gap-3 max-w-sm">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 bg-purple-600/20 text-purple-400 rounded-lg shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{file.name}</p>
+                <p className="text-[10px] text-gray-400 font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+            </div>
+            <a
+              href={file.url}
+              download={file.name}
+              className="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden xs:inline">Baixar</span>
+            </a>
+          </div>
+        );
+      }
+    }
+
+    if (imageUrlInText) {
+      return (
+        <div className="mt-2 max-w-sm rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
+          <img
+            src={imageUrlInText}
+            alt="Mídia da Mensagem"
+            onClick={() => setPreviewImageUrl(imageUrlInText)}
+            className="w-full max-h-80 object-cover cursor-pointer hover:scale-105 transition-transform"
+          />
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="flex-1 h-full flex flex-col bg-[#0B0C10]/60 backdrop-blur-xl overflow-hidden border-r border-white/5 relative">
       {/* Header for Chat Channel */}
@@ -61,7 +155,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <span className="text-purple-400 font-mono font-bold text-lg">#</span>
           <span className="font-bold text-sm text-white capitalize">{channelName}</span>
           <span className="text-[10px] text-gray-400 ml-2 hidden sm:inline">
-            Mensagens P2P diretas via RTCDataChannel
+            Mensagens & Mídias Salvas na Conversa P2P
           </span>
         </div>
       </div>
@@ -75,7 +169,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
             <p className="text-sm font-semibold text-gray-300">Bem-vindo ao #{channelName}!</p>
             <p className="text-xs text-gray-500 max-w-xs mt-1">
-              Este é o início da conversa P2P. Envie uma mensagem ou compartilhe arquivos diretamente.
+              Envie mensagens e mídias diretamente. O histórico e os arquivos ficam armazenados no chat.
             </p>
           </div>
         ) : (
@@ -93,16 +187,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   <span className="text-[10px] text-gray-500 font-mono">{msg.timestamp}</span>
                 </div>
 
-                <div className="text-xs text-gray-200 mt-1 leading-relaxed break-words bg-white/5 p-2.5 rounded-xl border border-white/5 inline-block max-w-full">
-                  {msg.text}
-                </div>
+                {msg.text && (
+                  <div className="text-xs text-gray-200 mt-1 leading-relaxed break-words bg-white/5 p-2.5 rounded-xl border border-white/5 inline-block max-w-full">
+                    {msg.text}
+                  </div>
+                )}
+
+                {/* Render Media Preview (Images, Videos, Audio, Files) */}
+                {renderMessageMedia(msg)}
               </div>
             </div>
           ))
         )}
 
         {/* Live File Transfers Progress Cards */}
-        {transferFiles.map((file) => (
+        {transferFiles.filter(f => f.status !== 'completed').map((file) => (
           <div
             key={file.id}
             className="p-3 bg-[#12131C]/90 border border-purple-500/30 rounded-xl flex items-center gap-3 shadow-md max-w-md"
@@ -132,22 +231,33 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <span>{file.progress}%</span>
               </div>
             </div>
-
-            {file.status === 'completed' && file.url && (
-              <a
-                href={file.url}
-                download={file.name}
-                className="p-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden xs:inline">Baixar</span>
-              </a>
-            )}
           </div>
         ))}
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Image Lightbox Preview Modal */}
+      {previewImageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setPreviewImageUrl(null)}
+              className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewImageUrl}
+              alt="Visualização da Mídia"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Emoji Modal Picker */}
       {showEmojiPicker && (
@@ -177,7 +287,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Enviar uma mensagem em #${channelName}...`}
+            placeholder={`Enviar uma mensagem ou link em #${channelName}...`}
             rows={1}
             className="w-full bg-transparent text-xs text-white placeholder-gray-500 outline-none resize-none py-2 pr-20"
           />
@@ -196,7 +306,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-purple-400 transition-colors"
-              title="Anexar arquivo P2P 📎"
+              title="Anexar Foto, Vídeo ou Arquivo P2P 📎"
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -205,6 +315,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
+              accept="image/*,video/*,audio/*,application/*,text/*"
             />
 
             <button
@@ -221,3 +332,4 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     </div>
   );
 };
+

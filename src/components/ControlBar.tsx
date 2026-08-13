@@ -50,15 +50,39 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         {/* Mic Control */}
         <button
           onClick={onToggleMic}
-          className={`p-3 rounded-2xl border font-semibold transition-all transform active:scale-95 shadow-lg flex items-center gap-2 ${
+          className={`p-3 rounded-2xl border font-semibold transition-all transform active:scale-95 shadow-lg flex items-center gap-2 relative ${
             currentUser.micMuted
               ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-rose-900/20'
+              : currentUser.isSpeaking
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] ring-2 ring-emerald-400/50 scale-105'
               : 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400/30 text-white shadow-purple-900/40'
           }`}
-          title={currentUser.micMuted ? 'Ativar Microfone 🎙' : 'Mutar Microfone 🔇'}
+          title={
+            currentUser.micMuted
+              ? 'Clique para Ativar Microfone 🎙'
+              : currentUser.isSpeaking
+              ? 'Você está FALANDO agora (Voz transmitida em tempo real)'
+              : 'Microfone Ativo — Clique para Mutar 🔇'
+          }
         >
-          {currentUser.micMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          <span className="hidden md:inline text-xs">{currentUser.micMuted ? 'Mutado' : 'Microfone'}</span>
+          {currentUser.micMuted ? (
+            <MicOff className="w-5 h-5" />
+          ) : currentUser.isSpeaking ? (
+            <div className="flex items-end gap-[2px] h-5">
+              <span className="w-1 bg-white rounded-full animate-eq-1" />
+              <span className="w-1 bg-white rounded-full animate-eq-2" />
+              <span className="w-1 bg-white rounded-full animate-eq-3" />
+            </div>
+          ) : (
+            <Mic className="w-5 h-5" />
+          )}
+          <span className="hidden md:inline text-xs font-bold">
+            {currentUser.micMuted
+              ? 'Mutado'
+              : currentUser.isSpeaking
+              ? 'FALANDO...'
+              : 'Microfone'}
+          </span>
         </button>
 
         {/* Camera Control */}

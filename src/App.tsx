@@ -71,7 +71,20 @@ export default function App() {
 
   // Chat & Files State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const [transferFiles, setTransferFiles] = useState<TransferFile[]>([]);
+
+  // Update messagesRef whenever messages change
+  useEffect(() => {
+    messagesRef.current = messages;
+    if (currentRoom && messages.length > 0) {
+      try {
+        localStorage.setItem(`palorni_room_chat_${currentRoom.id}`, JSON.stringify(messages));
+      } catch (e) {
+        console.warn('Storage error:', e);
+      }
+    }
+  }, [messages, currentRoom]);
 
   // UI Drawer State for Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -155,7 +168,20 @@ export default function App() {
         });
       },
       onChatMessage: (remotePeerId, msgData) => {
-        setMessages((prev) => [...prev, msgData]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msgData.id)) return prev;
+          return [...prev, msgData];
+        });
+      },
+      onChatHistory: (remotePeerId, historicalMsgs) => {
+        if (Array.isArray(historicalMsgs) && historicalMsgs.length > 0) {
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newMsgs = historicalMsgs.filter((m: ChatMessage) => m && m.id && !existingIds.has(m.id));
+            if (newMsgs.length === 0) return prev;
+            return [...prev, ...newMsgs];
+          });
+        }
       },
       onFileChunkProgress: (fileMeta) => {
         setTransferFiles((prev) => {
@@ -170,8 +196,26 @@ export default function App() {
       },
       onFileReceived: (fileMeta) => {
         addNotification('Arquivo Recebido! 📎', `${fileMeta.name} (${(fileMeta.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
+        const fileMsg: ChatMessage = {
+          id: fileMeta.id,
+          senderId: 'remote',
+          senderName: fileMeta.senderName || 'Participante',
+          senderAvatar: '📁',
+          text: `Compartilhou o arquivo: ${fileMeta.name}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          file: fileMeta,
+        };
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === fileMsg.id)) {
+            return prev.map((m) => (m.id === fileMsg.id ? fileMsg : m));
+          }
+          return [...prev, fileMsg];
+        });
       },
       onSpeakingStateChange: (speakingPeerId, isSpeaking) => {
+        if (speakingPeerId === peerId) {
+          setCurrentUser((prev) => ({ ...prev, isSpeaking }));
+        }
         setUsers((prev) =>
           prev.map((u) => (u.id === speakingPeerId ? { ...u, isSpeaking } : u))
         );
@@ -201,6 +245,19 @@ export default function App() {
       setIsP2PConnected(true);
 
       setCurrentUser((prev) => ({ ...prev, isHost }));
+
+      // Restore saved chat history for this room
+      try {
+        const savedChat = localStorage.getItem(`palorni_room_chat_${rId}`);
+        if (savedChat) {
+          const parsedMsgs = JSON.parse(savedChat);
+          if (Array.isArray(parsedMsgs) && parsedMsgs.length > 0) {
+            setMessages(parsedMsgs);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse room chat history:', e);
+      }
 
       // Map users
       const formattedUsers: UserProfile[] = (clients || []).map((c: any) => ({
@@ -250,6 +307,11 @@ export default function App() {
           signaling.sendIceCandidate(roomId, peerId, newPeerId, candidate);
         });
         const dc = webrtcRef.current.createDataChannel(newPeerId, pc);
+        dc.onopen = () => {
+          if (messagesRef.current.length > 0) {
+            webrtcRef.current?.sendChatHistory(newPeerId, messagesRef.current);
+          }
+        };
 
         pc.createOffer().then((offer) => {
           pc.setLocalDescription(offer);
@@ -269,6 +331,11 @@ export default function App() {
       if (signal.type === 'offer') {
         pc.ondatachannel = (e) => {
           webrtcRef.current?.setupDataChannel(senderPeerId, e.channel);
+          e.channel.onopen = () => {
+            if (messagesRef.current.length > 0) {
+              webrtcRef.current?.sendChatHistory(senderPeerId, messagesRef.current);
+            }
+          };
         };
         await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
         const answer = await pc.createAnswer();
@@ -437,15 +504,33 @@ export default function App() {
     if (!webrtcRef.current) return;
     addNotification('Enviando Arquivo P2P 📎', `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
 
+    const localUrl = URL.createObjectURL(file);
     const fileMeta: TransferFile = {
-      id: `file-${Date.now()}`,
+      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       name: file.name,
       size: file.size,
       type: file.type,
-      progress: 0,
-      status: 'downloading',
+      url: localUrl,
+      progress: 100,
+      status: 'completed',
       senderName: currentUser.name,
     };
+
+    const fileMsg: ChatMessage = {
+      id: fileMeta.id,
+      senderId: peerId,
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatar,
+      text: `Compartilhou um arquivo: ${file.name}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      file: fileMeta,
+    };
+
+    setMessages((prev) => [...prev, fileMsg]);
+
+    if (webrtcRef.current) {
+      webrtcRef.current.sendChatMessage(fileMsg);
+    }
 
     setTransferFiles((prev) => [...prev, fileMeta]);
 
@@ -521,6 +606,8 @@ export default function App() {
         settings={settings}
         onToggleDemoMode={() => setSettings((s) => ({ ...s, demoMode: !s.demoMode }))}
         onOpenDiagnostics={() => setShowDiagnosticModal(true)}
+        isSpeaking={currentUser.isSpeaking}
+        isMicMuted={currentUser.micMuted}
       />
 
       {/* Main Body */}

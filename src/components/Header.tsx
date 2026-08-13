@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Wifi, Users, Download, Settings, Copy, Check, PlayCircle, Share2, Activity } from 'lucide-react';
+import { Shield, Wifi, Users, Download, Settings, Copy, Check, PlayCircle, Share2, Activity, Volume2, MicOff, Mic } from 'lucide-react';
 import { AppSettings, RoomInfo } from '../types';
 
 interface HeaderProps {
@@ -17,6 +17,8 @@ interface HeaderProps {
   settings: AppSettings;
   onToggleDemoMode: () => void;
   onOpenDiagnostics?: () => void;
+  isSpeaking?: boolean;
+  isMicMuted?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,6 +36,8 @@ export const Header: React.FC<HeaderProps> = ({
   settings,
   onToggleDemoMode,
   onOpenDiagnostics,
+  isSpeaking = false,
+  isMicMuted = false,
 }) => {
   return (
     <header className="h-14 w-full bg-[#12131C]/80 backdrop-blur-md border-b border-white/10 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 shadow-lg">
@@ -90,6 +94,51 @@ export const Header: React.FC<HeaderProps> = ({
                 </>
               )}
             </button>
+          </div>
+        )}
+
+        {/* Active Call & Speaking Transmission Indicator */}
+        {roomInfo && (
+          <div
+            className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border text-xs font-bold transition-all ml-1 ${
+              isSpeaking
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse'
+                : isMicMuted
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            }`}
+            title={
+              isSpeaking
+                ? 'Sua voz está sendo transmitida em tempo real!'
+                : isMicMuted
+                ? 'Microfone Mutado'
+                : 'Call de Voz Ativa (100% Web / Mobile P2P)'
+            }
+          >
+            {isSpeaking ? (
+              <>
+                <div className="flex items-end gap-[2px] h-3.5">
+                  <span className="w-1 bg-emerald-400 rounded-full animate-eq-1" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-eq-2" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-eq-3" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-eq-4" />
+                </div>
+                <span className="font-mono text-[11px] tracking-wide uppercase hidden sm:inline">FALANDO...</span>
+              </>
+            ) : isMicMuted ? (
+              <>
+                <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden sm:inline font-mono text-[11px]">MUTADO</span>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-300" />
+                </div>
+                <span className="hidden sm:inline font-mono text-[11px] text-emerald-300">CALL ATIVA</span>
+              </>
+            )}
           </div>
         )}
       </div>

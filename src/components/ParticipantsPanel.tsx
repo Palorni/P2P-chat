@@ -75,10 +75,20 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
               >
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 transition-all ${
+                        user.isSpeaking
+                          ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 ring-2 ring-emerald-400 ring-offset-1 ring-offset-black shadow-[0_0_12px_rgba(16,185,129,0.8)] scale-105'
+                          : 'bg-gradient-to-tr from-purple-600 to-pink-500'
+                      }`}
+                    >
                       {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                     </div>
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-gray-900" />
+                    <span
+                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-900 ${
+                        user.isSpeaking ? 'bg-emerald-400 animate-ping' : 'bg-emerald-400'
+                      }`}
+                    />
                   </div>
 
                   <div className="truncate">
@@ -103,11 +113,21 @@ export const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
 
                 {/* Status Badges & Host Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {user.isSpeaking && (
+                    <div className="flex items-end gap-[2px] h-3 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-400/40 rounded">
+                      <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-1" />
+                      <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-2" />
+                      <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-3" />
+                    </div>
+                  )}
+
                   <div className="text-gray-400">
                     {user.micMuted ? (
                       <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                    ) : user.isSpeaking ? (
+                      <Mic className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                     ) : (
-                      <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                      <Mic className="w-3.5 h-3.5 text-emerald-400/80" />
                     )}
                   </div>
 

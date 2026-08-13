@@ -4,6 +4,7 @@ export interface WebRTCEvents {
   onRemoteStream?: (peerId: string, stream: MediaStream, type: 'camera' | 'screen') => void;
   onRemoteStreamRemoved?: (peerId: string) => void;
   onChatMessage?: (peerId: string, message: any) => void;
+  onChatHistory?: (peerId: string, messages: any[]) => void;
   onFileChunkProgress?: (file: TransferFile) => void;
   onFileReceived?: (file: TransferFile, blob: Blob) => void;
   onSpeakingStateChange?: (peerId: string, isSpeaking: boolean) => void;
@@ -257,6 +258,13 @@ export class WebRTCManager {
     });
   }
 
+  public sendChatHistory(targetPeerId: string, history: any[]) {
+    const dc = this.dataChannels.get(targetPeerId);
+    if (dc && dc.readyState === 'open') {
+      dc.send(JSON.stringify({ type: 'chat_history', data: history }));
+    }
+  }
+
   // --- CHUNKED FILE TRANSFER ---
   public async sendFile(file: File, senderName: string, onProgress?: (progress: number) => void) {
     const fileId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
@@ -314,6 +322,14 @@ export class WebRTCManager {
         if (parsed.type === 'chat') {
           if (this.events.onChatMessage) {
             this.events.onChatMessage(remotePeerId, parsed.data);
+          }
+        } else if (parsed.type === 'chat_history') {
+          if (this.events.onChatHistory) {
+            this.events.onChatHistory(remotePeerId, parsed.data);
+          }
+        } else if (parsed.type === 'speaking') {
+          if (this.events.onSpeakingStateChange) {
+            this.events.onSpeakingStateChange(remotePeerId, parsed.data?.isSpeaking ?? false);
           }
         } else if (parsed.type === 'file_header') {
           const fileMeta = parsed.data as TransferFile;
@@ -377,6 +393,8 @@ export class WebRTCManager {
     }
   }
 
+  private lastSpeakingState = false;
+
   private checkSpeakingLoop = () => {
     if (!this.isAnalyzingSpeaking || !this.audioAnalyser) return;
     const dataArray = new Uint8Array(this.audioAnalyser.frequencyBinCount);
@@ -387,13 +405,23 @@ export class WebRTCManager {
       sum += dataArray[i];
     }
     const average = sum / dataArray.length;
-    const isSpeaking = average > 25; // threshold
+    const isSpeaking = average > 18; // More sensitive threshold for Web audio/mobile
 
     if (this.events.onSpeakingStateChange) {
       this.events.onSpeakingStateChange(this.localPeerId, isSpeaking);
     }
 
-    setTimeout(this.checkSpeakingLoop, 200);
+    if (this.lastSpeakingState !== isSpeaking) {
+      this.lastSpeakingState = isSpeaking;
+      const msg = JSON.stringify({ type: 'speaking', data: { isSpeaking } });
+      this.dataChannels.forEach((dc) => {
+        if (dc.readyState === 'open') {
+          try { dc.send(msg); } catch (e) {}
+        }
+      });
+    }
+
+    setTimeout(this.checkSpeakingLoop, 150);
   };
 
   // --- CLEANUP ---
