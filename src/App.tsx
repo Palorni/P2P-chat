@@ -13,6 +13,7 @@ import { ControlBar } from './components/ControlBar';
 import { SettingsModal } from './components/SettingsModal';
 import { InstallPromptModal } from './components/InstallPromptModal';
 import { ToastNotifications } from './components/ToastNotifications';
+import { ManualP2PModal } from './components/ManualP2PModal';
 
 export default function App() {
   // PWA Install State
@@ -89,6 +90,8 @@ export default function App() {
   // UI Drawer State for Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileParticipantsOpen, setMobileParticipantsOpen] = useState(false);
+  const [showManualP2PModal, setShowManualP2PModal] = useState(false);
+  const manualPeerRef = useRef<RTCPeerConnection | null>(null);
 
   // Notifications
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
@@ -550,6 +553,85 @@ export default function App() {
     });
   };
 
+  // --- MANUAL P2P EXCHANGE HANDLERS ---
+  const handleGenerateManualOffer = async (): Promise<string> => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ],
+    });
+    manualPeerRef.current = pc;
+
+    if (webrtcRef.current) {
+      const dc = pc.createDataChannel('palorni-nexus-dc');
+      webrtcRef.current.setupDataChannel('manual-peer', dc);
+    }
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    const payload = JSON.stringify(pc.localDescription);
+    return btoa(unescape(encodeURIComponent(payload)));
+  };
+
+  const handleProcessManualOffer = async (offerCode: string): Promise<string> => {
+    const decodedStr = decodeURIComponent(escape(atob(offerCode)));
+    const offerSdp = JSON.parse(decodedStr);
+
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ],
+    });
+    manualPeerRef.current = pc;
+
+    pc.ondatachannel = (e) => {
+      if (webrtcRef.current) {
+        webrtcRef.current.setupDataChannel('manual-peer', e.channel);
+        setIsP2PConnected(true);
+        addNotification('P2P Conectado! 🎉', 'Conexão WebRTC manual estabelecida com sucesso.', 'success');
+      }
+    };
+
+    await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    if (!currentRoom) {
+      handleCreateRoom(currentUser.name || 'Dispositivo_B');
+    }
+
+    const payload = JSON.stringify(pc.localDescription);
+    return btoa(unescape(encodeURIComponent(payload)));
+  };
+
+  const handleApplyManualAnswer = async (answerCode: string): Promise<boolean> => {
+    try {
+      const decodedStr = decodeURIComponent(escape(atob(answerCode)));
+      const answerSdp = JSON.parse(decodedStr);
+
+      if (manualPeerRef.current) {
+        await manualPeerRef.current.setRemoteDescription(new RTCSessionDescription(answerSdp));
+        setIsP2PConnected(true);
+        if (!currentRoom) {
+          handleCreateRoom(currentUser.name || 'Dispositivo_A');
+        }
+        addNotification('P2P Conectado! 🎉', 'Conexão WebRTC manual estabelecida com sucesso.', 'success');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Error applying manual answer:', e);
+      return false;
+    }
+  };
+
   // --- HOST CONTROLS ---
   const handleLockRoom = (locked: boolean) => {
     if (signalingRef.current && currentRoom) {
@@ -618,6 +700,7 @@ export default function App() {
           initialRoomId={urlRoomId}
           demoMode={settings.demoMode}
           onToggleDemoMode={() => setSettings((s) => ({ ...s, demoMode: !s.demoMode }))}
+          onOpenManualP2P={() => setShowManualP2PModal(true)}
         />
       ) : (
         <div className="flex-1 flex overflow-hidden relative">
@@ -715,6 +798,15 @@ export default function App() {
           }
           setShowInstallModal(false);
         }}
+      />
+
+      {/* Manual P2P Connection Modal */}
+      <ManualP2PModal
+        isOpen={showManualP2PModal}
+        onClose={() => setShowManualP2PModal(false)}
+        onGenerateOffer={handleGenerateManualOffer}
+        onProcessOffer={handleProcessManualOffer}
+        onApplyAnswer={handleApplyManualAnswer}
       />
 
       {/* Windows 11 Toast Notifications */}

@@ -8,6 +8,7 @@ interface WelcomeScreenProps {
   initialRoomId?: string;
   demoMode: boolean;
   onToggleDemoMode: () => void;
+  onOpenManualP2P?: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
@@ -16,6 +17,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   initialRoomId = '',
   demoMode,
   onToggleDemoMode,
+  onOpenManualP2P,
 }) => {
   const [roomCode, setRoomCode] = useState(initialRoomId);
   const [userName, setUserName] = useState('');
@@ -162,6 +164,21 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 <span className="text-[11px] font-semibold text-gray-300">Conexão Direta</span>
               </div>
             </div>
+
+            {/* Manual P2P Mode Button */}
+            {onOpenManualP2P && (
+              <button
+                type="button"
+                onClick={onOpenManualP2P}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-900/40 via-purple-900/40 to-teal-900/40 hover:from-cyan-900/60 hover:to-teal-900/60 border border-cyan-500/40 hover:border-cyan-400 rounded-xl text-xs font-semibold text-cyan-200 flex items-center justify-between transition-all active:scale-98 shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <span>Teste P2P Manual (Copiar/Colar Código Oferta-Resposta)</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-cyan-400" />
+              </button>
+            )}
 
             {/* Demo Mode Selector */}
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10 text-xs">

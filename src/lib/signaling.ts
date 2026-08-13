@@ -1,3 +1,5 @@
+import { getSignalingServerUrl } from './config';
+
 export type SignalHandler = (msg: any) => void;
 
 export class SignalingProvider {
@@ -6,18 +8,24 @@ export class SignalingProvider {
   private listeners: Map<string, Set<SignalHandler>> = new Map();
   public isConnected: boolean = false;
   public isDemoMode: boolean = false;
+  private broadcastChannel: BroadcastChannel | null = null;
+  private currentRoomId: string = '';
+  private currentPeerId: string = '';
+  private localUser: { userName: string; avatar: string } = { userName: 'User', avatar: '⚡' };
 
   constructor(customUrl?: string) {
-    if (customUrl) {
-      this.serverUrl = customUrl;
-    } else {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      this.serverUrl = `${protocol}//${window.location.host}/ws`;
-    }
+    this.serverUrl = customUrl || getSignalingServerUrl();
   }
 
   public connect(roomId: string, peerId: string, userName: string, avatar: string, demoMode: boolean = false): Promise<boolean> {
     this.isDemoMode = demoMode;
+    this.currentRoomId = roomId;
+    this.currentPeerId = peerId;
+    this.localUser = { userName, avatar };
+
+    // Setup local BroadcastChannel signaling for same domain/tab/local web testing
+    this.setupBroadcastChannel(roomId, peerId);
+
     if (demoMode) {
       this.isConnected = true;
       setTimeout(() => {
@@ -56,22 +64,74 @@ export class SignalingProvider {
         };
 
         this.ws.onerror = (err) => {
-          console.warn('[Signaling] WebSocket error, enabling fallback Demo Mode handling:', err);
-          this.isConnected = false;
-          this.emit('error', { message: 'Servidor de signaling indisponível. Alternado para modo local.' });
-          resolve(false);
+          console.warn('[Signaling] WebSocket unavailable, falling back to local/web signaling:', err);
+          this.isConnected = true; // Set true for local/broadcast signaling mode
+          this.simulateLocalJoined(roomId, peerId, userName, avatar);
+          resolve(true);
         };
 
         this.ws.onclose = () => {
-          this.isConnected = false;
-          this.emit('disconnected', {});
+          if (!this.broadcastChannel) {
+            this.isConnected = false;
+            this.emit('disconnected', {});
+          }
         };
       } catch (err) {
-        console.error('[Signaling] WebSocket connection exception:', err);
-        this.isConnected = false;
-        resolve(false);
+        console.warn('[Signaling] Connection exception, enabling web fallback:', err);
+        this.isConnected = true;
+        this.simulateLocalJoined(roomId, peerId, userName, avatar);
+        resolve(true);
       }
     });
+  }
+
+  private setupBroadcastChannel(roomId: string, peerId: string) {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        if (this.broadcastChannel) {
+          this.broadcastChannel.close();
+        }
+        this.broadcastChannel = new BroadcastChannel(`palorni_room_${roomId}`);
+        this.broadcastChannel.onmessage = (event) => {
+          const data = event.data;
+          if (data && data.senderPeerId !== peerId) {
+            this.handleIncoming(data);
+          }
+        };
+      } catch (e) {
+        console.warn('[Signaling] BroadcastChannel setup failed:', e);
+      }
+    }
+  }
+
+  private simulateLocalJoined(roomId: string, peerId: string, userName: string, avatar: string) {
+    setTimeout(() => {
+      this.emit('joined', {
+        roomId,
+        peerId,
+        isHost: true,
+        hostPeerId: peerId,
+        clients: [{ peerId, userName, isHost: true, avatar }]
+      });
+
+      // Broadcast join to other tabs/local windows
+      this.broadcastLocalMessage({
+        type: 'user_joined',
+        roomId,
+        senderPeerId: peerId,
+        client: { peerId, userName, isHost: false, avatar }
+      });
+    }, 100);
+  }
+
+  private broadcastLocalMessage(msg: any) {
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage({ ...msg, senderPeerId: this.currentPeerId });
+      } catch (e) {
+        console.warn('[Signaling] BroadcastChannel send error:', e);
+      }
+    }
   }
 
   public disconnect() {
@@ -79,17 +139,26 @@ export class SignalingProvider {
       this.ws.close();
       this.ws = null;
     }
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+      this.broadcastChannel = null;
+    }
     this.isConnected = false;
   }
 
   public send(type: string, roomId: string, peerId: string, payload: any) {
     if (this.isDemoMode) {
-      // Echo or simulate for demo mode
       return;
     }
+
+    const messageObj = { type, roomId, peerId, payload, senderPeerId: peerId };
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, roomId, peerId, payload }));
+      this.ws.send(JSON.stringify(messageObj));
     }
+
+    // Always mirror to BroadcastChannel for local/web multi-tab/device testing
+    this.broadcastLocalMessage(messageObj);
   }
 
   public sendOffer(roomId: string, peerId: string, targetPeerId: string, offer: RTCSessionDescriptionInit) {
