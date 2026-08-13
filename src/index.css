@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Custom sleek scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(11, 12, 16, 0.5);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.6);
+  }
+}
+
+/* Glassmorphic border glow effects */
+.glass-border {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 19, 28, 0.8);
+  backdrop-filter: blur(16px);
+}
+
+/* --- THEME VARIATIONS --- */
+/* Theme 1: Dark Nexus (Default) */
+.theme-dark {
+  --bg-primary: #0B0C10;
+  --bg-secondary: #0D0E15;
+  --bg-card: #12131C;
+  --accent-purple: #8B5CF6;
+  --accent-pink: #EC4899;
+  --accent-cyan: #06B6D4;
+}
+
+/* Theme 2: Fortnite Neon / Synthwave */
+.theme-synthwave {
+  --bg-primary: #120224;
+  --bg-secondary: #1A0333;
+  --bg-card: #250648;
+  --accent-purple: #D946EF;
+  --accent-pink: #FF007A;
+  --accent-cyan: #00F0FF;
+  background-color: #120224 !important;
+}
+
+.theme-synthwave .bg-\[\#0B0C10\] {
+  background-color: #120224 !important;
+}
+.theme-synthwave .bg-\[\#0D0E15\] {
+  background-color: #1A0333 !important;
+}
+.theme-synthwave .bg-\[\#12131C\] {
+  background-color: #250648 !important;
+}
+
+/* Theme 3: Win11 Acrylic Teal (Cyanide) */
+.theme-cyanide {
+  --bg-primary: #05131E;
+  --bg-secondary: #081B2A;
+  --bg-card: #0E273C;
+  --accent-purple: #0EA5E9;
+  --accent-pink: #00E5FF;
+  --accent-cyan: #10B981;
+  background-color: #05131E !important;
+}
+
+.theme-cyanide .bg-\[\#0B0C10\] {
+  background-color: #05131E !important;
+}
+.theme-cyanide .bg-\[\#0D0E15\] {
+  background-color: #081B2A !important;
+}
+.theme-cyanide .bg-\[\#12131C\] {
+  background-color: #0E273C !important;
+}
+

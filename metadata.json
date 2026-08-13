@@ -1,0 +1,11 @@
+{
+  "name": "Palorni Nexus",
+  "description": "Connect. Share. Directly. Modern P2P communication platform with voice, video, screen share, and instant file transfer.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
